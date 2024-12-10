@@ -1,0 +1,44 @@
+[package]
+name = "mcp_ai"
+version = "0.1.0"
+edition = "2021"
+
+[workspace]
+resolver = "2"
+[build]
+rustflags = ["-Awarnings"]
+
+[workspace.package]
+authors = ["Context hub Inc"]
+version = "0.1.0"
+edition = "2024"
+repository = "https://github.com/GopinathMR/mcp_ai"
+documentation = "https://docs.rs/mcp_ai"
+homepage = "https://www.contexthub.dev/"
+keywords = ["claude", "mcp", "jsonrpc", "agent", "AI", "LLM", "rust"]
+readme = "README.md"
+
+[lib]
+name = "mcp_ai"
+path = "src/lib.rs"
+
+[[bin]]
+name = "mcp-server"
+path = "examples/main.rs"
+
+[dependencies]
+axum = { version = "0.7.9", features=["tokio"]}
+axum-extra = { version = "0.9.6", features = ["typed-header"] }
+bytes = "1.9.0"
+futures = "0.3.31"
+futures-util = { version = "0.3.31"}
+headers = "0.4.0"
+http-body-util = "0.1.2"
+hyper = { version = "1.0", features = ["full"] }
+hyper-util = { version = "0.1", features = ["full"] }
+tokio = { version = "1.42.0", features = ["full"] }
+tokio-stream = "0.1.17"
+tower-http = { version = "0.6.2", features = ["trace", "tracing"] }
+tracing = "0.1.41"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
