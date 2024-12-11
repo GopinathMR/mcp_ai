@@ -14,7 +14,7 @@ use axum::{
 };
 use axum_extra::TypedHeader;
 use futures::stream::{self, Stream};
-use std::{convert::Infallible, path::PathBuf, time::Duration};
+use std::{convert::Infallible, time::Duration};
 use tokio_stream::StreamExt as _;
 use tower_http::trace::TraceLayer;
 
@@ -30,13 +30,13 @@ impl McpServer {
     }
 
     pub async fn start(&self) -> Result<(), Box<dyn Error>> {
-        let sse_server = self.build_sse_server2();
+        let sse_server = self.build_sse_server();
         let http_server = self.build_http_server();    
         let _ret = futures_util::join!(sse_server, http_server);
         Ok(())
     }
 
-    async fn build_sse_server2(&self) -> Result<(), Box<dyn Error>> {
+    async fn build_sse_server(&self) -> Result<(), Box<dyn Error>> {
         let socket = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), self.sse_port);
         println!("Starting SSE server listening on {}", self.sse_port);
         let listener = TcpListener::bind(socket).await?;
@@ -47,27 +47,7 @@ impl McpServer {
     }
 
     fn build_sse_router(&self) -> Router {
-        Router::new().route("/sse", get(sse_handler2)).layer(TraceLayer::new_for_http())
-    }
-
-
-
-    async fn _build_sse_server(&self) -> Result<(), Box<dyn Error>> {
-        let socket = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), self.sse_port);
-        let listener = TcpListener::bind(socket).await?;
-        loop {
-            let (stream, _) = listener.accept().await?;
-            let io = TokioIo::new(stream);
-    
-                tokio::task::spawn(async move {
-                    if let Err(err) = http1::Builder::new()
-                        .serve_connection(io, service_fn(sse_handler))
-                        .await
-                    {
-                        println!("Error serving connection: {:?}", err);
-                    }
-                });
-        }
+        Router::new().route("/sse", get(sse_handler)).layer(TraceLayer::new_for_http())
     }
 
     async fn build_http_server(&self) -> Result<(), Box<dyn Error>> {
@@ -91,25 +71,17 @@ impl McpServer {
     
 }
 
-async fn sse_handler( _: Request<hyper::body::Incoming>) -> Result<Response<Full<Bytes>>, hyper::Error> {
-    Ok(Response::new(Full::new(Bytes::from("http://127.0.0.1:8081"))))
-}
-
 async fn http_handler( _: Request<hyper::body::Incoming>) -> Result<Response<Full<Bytes>>, hyper::Error> {
     Ok(Response::new(Full::new(Bytes::from("Hello World"))))
 }
 
 
-async fn sse_handler2(
+async fn sse_handler(
     TypedHeader(user_agent): TypedHeader<headers::UserAgent>,
 ) -> Sse<impl Stream<Item = Result<Event, Infallible>>> {
     println!("`{}` connected", user_agent.as_str());
 
-    // A `Stream` that repeats an event every second
-    //
-    // You can also create streams from tokio channels using the wrappers in
-    // https://docs.rs/tokio-stream
-    let stream = stream::repeat_with(|| Event::default().data("http://127.0.0.1:8081!"))
+    let stream = stream::repeat_with(|| Event::default().event("endpoint").data(urlencoding::encode("http://localhost:8081")))
         .map(Ok)
         .throttle(Duration::from_secs(1));
 
