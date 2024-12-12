@@ -1,4 +1,5 @@
 use std::{
+    collections::HashMap,
     error::Error,
     net::{IpAddr, Ipv4Addr, SocketAddr},
 };
@@ -8,19 +9,30 @@ use http_body_util::Full;
 use hyper::{server::conn::http1, service::service_fn};
 use hyper::{Request, Response};
 use hyper_util::rt::TokioIo;
+use jsonrpsee::{server::Server, types::ErrorObjectOwned};
+use protocol::{ClientInfo, InitializeResponse};
 use tokio::net::TcpListener;
 
 use axum::{
+    async_trait,
+    http::method,
     response::sse::{Event, Sse},
     routing::get,
     Router,
 };
 use axum_extra::TypedHeader;
 use futures::stream::{self, Stream};
+use jsonrpsee::proc_macros::rpc;
+use tower_layer::Identity;
 use std::{convert::Infallible, time::Duration};
 use tokio_stream::StreamExt as _;
 use tower_http::trace::TraceLayer;
 
+use crate::server::protocol::McpProtocolServer;
+
+mod protocol;
+
+#[derive(Clone, Copy)]
 pub struct McpServer {
     sse_port: u16,
     http_port: u16,
@@ -61,6 +73,11 @@ impl McpServer {
         Router::new()
             .route("/sse", get(sse_handler))
             .layer(TraceLayer::new_for_http())
+    }
+
+    async fn build_jsonrpc_server(&self) -> Result<Server<Identity , Identity>, Box<dyn Error>> {
+        let server = Server::builder().build("127.0.0.1:8081").await?;
+        Ok(server)
     }
 
     async fn build_http_server(&self) -> Result<(), Box<dyn Error>> {
@@ -107,4 +124,21 @@ async fn sse_handler(
             .interval(Duration::from_secs(1))
             .text("keep-alive-text"),
     )
+}
+
+#[allow(non_snake_case)]
+#[async_trait]
+impl McpProtocolServer for McpServer {
+    async fn initialize(
+        &self,
+        protocolVersion: &str,
+        capabilities: HashMap<String, String>,
+        clientInfo: ClientInfo,
+    ) -> Result<InitializeResponse, ErrorObjectOwned> {
+        Ok(InitializeResponse::default())
+    }
+
+    async fn initialized(&self) -> Result<(), ErrorObjectOwned> {
+        Ok(())
+    }
 }

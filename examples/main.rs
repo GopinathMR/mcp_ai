@@ -1,5 +1,5 @@
 use mcp_ai::server::McpServer;
-use tracing::{dispatcher::with_default, info};
+use tracing::info;
 use tracing_subscriber::{fmt, layer::SubscriberExt, prelude::*, EnvFilter};
 
 #[tokio::main]
